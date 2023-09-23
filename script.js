@@ -59,7 +59,6 @@ async function getHistoricalRates(curr) {
 
   for (let i = 0; i < 7; i++) {
     const currentDate = `${year}-${month}-${day}`;
-    console.log(currentDate);
     const [res, plnRate] = await Promise.all([
       fetch(`${apiUrl}/${currentDate}?${params({ symbols: currencyValue })}`),
       getPlnRate(currentDate),
@@ -78,10 +77,8 @@ async function getHistoricalRates(curr) {
     }
 
     const ul = document.querySelector("ul.specific-currency");
-    // ul.innerHTML = "";
     ul.appendChild(documentFragment);
 
     day -= 1;
-    console.log(day);
   }
 }
