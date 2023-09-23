@@ -52,29 +52,33 @@ async function getHistoricalRates(curr) {
   let day = date.getDate();
   let month = date.getMonth() + 1;
   month = month.toString().padStart(2, "0");
-  let year = date.getFullYear();
-  let currentDate = `${year}-${month}-${day}`;
+  const year = date.getFullYear();
 
-  const [res, plnRate] = await Promise.all([
-    fetch(`${apiUrl}/${currentDate}?${params({ symbols: currencyValue })}`),
-    getPlnRate(currentDate),
-  ]);
+  for (let i = 0; i < 7; i++) {
+    const currentDate = `${year}-${month}-${day}`;
+    console.log(currentDate);
+    const [res, plnRate] = await Promise.all([
+      fetch(`${apiUrl}/${currentDate}?${params({ symbols: currencyValue })}`),
+      getPlnRate(currentDate),
+    ]);
 
-  const data = await res.json();
+    const data = await res.json();
 
-  const { rates } = data;
-  const documentFragment = document.createDocumentFragment();
+    const { rates } = data;
+    const documentFragment = document.createDocumentFragment();
 
-  let currencyToPlnRate;
-  for (const currency in rates) {
-    currencyToPlnRate = (rates[currency] / plnRate).toFixed(5);
+    for (const currency in rates) {
+      const currencyToPlnRate = (rates[currency] / plnRate).toFixed(5);
+      const li = document.createElement("li");
+      li.textContent = `${currentDate}: ${currencyToPlnRate}`;
+      documentFragment.appendChild(li);
+    }
+
+    const ul = document.querySelector("ul.specific-currency");
+    // ul.innerHTML = "";
+    ul.appendChild(documentFragment);
+
+    day -= 1;
+    console.log(day);
   }
-
-  const li = document.createElement("li");
-  li.textContent = `${currentDate}: ${currencyToPlnRate}`;
-  documentFragment.appendChild(li);
-
-  const ul = document.querySelector("ul.specific-currency");
-  ul.innerHTML = "";
-  ul.appendChild(documentFragment);
 }
