@@ -39,7 +39,10 @@ async function loadAndInsertLatestRates() {
   const dataCurrency = document.querySelectorAll("[data-currency]");
 
   dataCurrency.forEach((currency) => {
-    currency.addEventListener("click", (curr) => getHistoricalRates(curr));
+    currency.addEventListener("click", (curr) => {
+      document.querySelector("ul.specific-currency").innerHTML = "";
+      getHistoricalRates(curr);
+    });
   });
 }
 
