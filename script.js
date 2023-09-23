@@ -9,16 +9,19 @@ function params(paramsObj) {
 
 async function getPlnRate(date = "latest") {
   const res = await fetch(`${apiUrl}/${date}?${params()}`);
+
   const data = await res.json();
+
   return Number(data.rates["PLN"]);
 }
 
 async function loadAndInsertLatestRates() {
   const [plnRate, res] = await Promise.all([getPlnRate(), fetch(`${apiUrl}/latest?${params()}`)]);
+
   const data = await res.json();
+
   // const rates = data.rates;
   const { rates } = data;
-
   const documentFragment = document.createDocumentFragment();
 
   for (const currency in rates) {
@@ -53,16 +56,25 @@ async function getHistoricalRates(curr) {
   let currentDate = `${year}-${month}-${day}`;
 
   const [res, plnRate] = await Promise.all([
-    fetch(`${apiUrl}/2023-09-20?${params({ symbols: currencyValue })}`),
+    fetch(`${apiUrl}/${currentDate}?${params({ symbols: currencyValue })}`),
     getPlnRate(currentDate),
   ]);
 
   const data = await res.json();
+
   const { rates } = data;
+  const documentFragment = document.createDocumentFragment();
+
+  let currencyToPlnRate;
   for (const currency in rates) {
-    const currencyToPlnRate = (rates[currency] / plnRate).toFixed(5);
-    console.log(currencyToPlnRate);
+    currencyToPlnRate = (rates[currency] / plnRate).toFixed(5);
   }
 
-  return console.log(data);
+  const li = document.createElement("li");
+  li.textContent = `${currentDate}: ${currencyToPlnRate}`;
+  documentFragment.appendChild(li);
+
+  const ul = document.querySelector("ul.specific-currency");
+  ul.innerHTML = "";
+  ul.appendChild(documentFragment);
 }
