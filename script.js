@@ -7,50 +7,37 @@ function params(paramsObj) {
   });
 }
 
-async function getPlnRate(date) {
-  try {
-    let res;
-    if (date) {
-      res = await fetch(`${apiUrl}/${date}?${params()}`);
-    } else {
-      res = await fetch(`${apiUrl}/latest?${params()}`);
-    }
-    const data = await res.json();
-    return Number(data.rates["PLN"]);
-  } catch (error) {
-    console.log(error);
-  }
+async function getPlnRate(date = "latest") {
+  const res = await fetch(`${apiUrl}/${date}?${params()}`);
+  const data = await res.json();
+  return Number(data.rates["PLN"]);
 }
 
 async function loadAndInsertLatestRates() {
-  try {
-    const [plnRate, res] = await Promise.all([getPlnRate(), fetch(`${apiUrl}/latest?${params()}`)]);
-    const data = await res.json();
-    // const rates = data.rates;
-    const { rates } = data;
+  const [plnRate, res] = await Promise.all([getPlnRate(), fetch(`${apiUrl}/latest?${params()}`)]);
+  const data = await res.json();
+  // const rates = data.rates;
+  const { rates } = data;
 
-    let documentFragment = document.createDocumentFragment();
+  const documentFragment = document.createDocumentFragment();
 
-    for (const currency in rates) {
-      const currencyToPlnRate = (rates[currency] / plnRate).toFixed(5);
-      const li = document.createElement("li");
-      li.textContent = `${currency}: ${currencyToPlnRate}`;
-      li.setAttribute("data-currency", currency);
-      documentFragment.appendChild(li);
-    }
-
-    const ul = document.querySelector("ul.rates");
-    ul.innerHTML = "";
-    ul.appendChild(documentFragment);
-
-    const dataCurrency = document.querySelectorAll("[data-currency]");
-
-    dataCurrency.forEach((currency) => {
-      currency.addEventListener("click", (curr) => getHistoricalRates(curr));
-    });
-  } catch (error) {
-    console.log(error);
+  for (const currency in rates) {
+    const currencyToPlnRate = (rates[currency] / plnRate).toFixed(5);
+    const li = document.createElement("li");
+    li.textContent = `${currency}: ${currencyToPlnRate}`;
+    li.setAttribute("data-currency", currency);
+    documentFragment.appendChild(li);
   }
+
+  const ul = document.querySelector("ul.rates");
+  ul.innerHTML = "";
+  ul.appendChild(documentFragment);
+
+  const dataCurrency = document.querySelectorAll("[data-currency]");
+
+  dataCurrency.forEach((currency) => {
+    currency.addEventListener("click", (curr) => getHistoricalRates(curr));
+  });
 }
 
 loadAndInsertLatestRates();
@@ -79,5 +66,3 @@ async function getHistoricalRates(curr) {
 
   return console.log(data);
 }
-
-// TO-DO: Naprawić funkcje getPlnRate(), zeby mozna bylo przekazac jako argument date
