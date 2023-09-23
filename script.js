@@ -77,8 +77,6 @@ async function getHistoricalRates(curr) {
     console.log(currencyToPlnRate);
   }
 
-  // const currencyToPlnRate = (data / plnRate).toFixed(5);
-
   return console.log(data);
 }
 
