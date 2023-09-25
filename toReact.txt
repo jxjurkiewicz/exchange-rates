@@ -1,0 +1,121 @@
+import React, { useEffect, useState } from 'react';
+
+const apiUrl = 'http://api.exchangeratesapi.io/v1';
+const apiAccessKey = '18b307333aefd4ec012fc91d03e783ec';
+
+function App() {
+  const [rates, setRates] = useState({});
+  const [selectedCurrency, setSelectedCurrency] = useState(null);
+
+  const params = (paramsObj) => {
+    return new URLSearchParams({
+      access_key: apiAccessKey,
+      ...paramsObj,
+    });
+  };
+
+  const getRates = async (date = 'latest') => {
+    try {
+      const res = await fetch(`${apiUrl}/${date}?${params()}`);
+      const data = await res.json();
+
+      const ratesInEur = data.rates;
+      const euroRate = Number(data.rates['PLN']);
+      const newRates = {};
+
+      for (const currencyKey in ratesInEur) {
+        if (currencyKey === 'PLN') {
+          continue;
+        }
+        if (currencyKey === 'EUR') {
+          newRates[currencyKey] = euroRate.toFixed(4);
+          continue;
+        }
+
+        const valueInEur = Number(ratesInEur[currencyKey]);
+        newRates[currencyKey] = ((1 / valueInEur) * euroRate).toFixed(4);
+      }
+
+      setRates(newRates);
+    } catch (error) {
+      console.error('Error fetching rates:', error);
+    }
+  };
+
+  const loadLatestRates = () => {
+    getRates('latest');
+  };
+
+  const getHistoricalRate = async (date, currencyKey) => {
+    try {
+      const res = await fetch(`${apiUrl}/${date}?${params({ symbols: [currencyKey, 'PLN'] })}`);
+      const data = await res.json();
+
+      return ((1 / data.rates[currencyKey]) * data.rates['PLN']).toFixed(4);
+    } catch (error) {
+      console.error('Error fetching historical rate:', error);
+    }
+  };
+
+  const displayHistoricalRates = async (currencyKey) => {
+    const date = new Date();
+    let day = date.getDate();
+    let month = date.getMonth() + 1;
+    month = month.toString().padStart(2, '0');
+    const year = date.getFullYear();
+
+    const dates = [];
+    const promises = [];
+
+    for (let i = 0; i < 7; i++) {
+      const currentDate = `${year}-${month}-${day}`;
+      dates.push(currentDate);
+      promises.push(getHistoricalRate(i === 0 ? 'latest' : currentDate, currencyKey));
+      day -= 1;
+    }
+
+    const historicalRates = await Promise.all(promises);
+
+    const historicalRatesObj = {};
+    dates.forEach((date, index) => {
+      historicalRatesObj[date] = historicalRates[index];
+    });
+
+    setSelectedCurrency({ currencyKey, historicalRates: historicalRatesObj });
+  };
+
+  useEffect(() => {
+    loadLatestRates();
+  }, []);
+
+  return (
+    <div>
+      <h1>Exchange Rates</h1>
+      <ul className="rates">
+        {Object.keys(rates).map((currencyKey) => (
+          <li
+            key={currencyKey}
+            onClick={() => displayHistoricalRates(currencyKey)}
+            style={{ cursor: 'pointer' }}
+          >
+            {currencyKey}: {rates[currencyKey]}
+          </li>
+        ))}
+      </ul>
+      {selectedCurrency && (
+        <div>
+          <h2>Historical Rates for {selectedCurrency.currencyKey}</h2>
+          <ul className="specific-currency">
+            {Object.entries(selectedCurrency.historicalRates).map(([date, rate]) => (
+              <li key={date}>
+                {date}: {rate}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default App;

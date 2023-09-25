@@ -1,34 +1,46 @@
 const apiUrl = "http://api.exchangeratesapi.io/v1";
+const apiAccessKey = "18b307333aefd4ec012fc91d03e783ec";
 
 function params(paramsObj) {
   return new URLSearchParams({
-    access_key: "ad7080edebef089173c4c0cf016f29c0",
+    access_key: apiAccessKey,
     ...paramsObj,
   });
 }
 
-async function getPlnRate(date = "latest") {
+async function getRates(date = "latest") {
+  // Api returns rate in EUR, we have to convert it to PLN
   const res = await fetch(`${apiUrl}/${date}?${params()}`);
-
   const data = await res.json();
 
-  return Number(data.rates["PLN"]);
+  const ratesInEur = data.rates;
+  const rates = {};
+  const euroRate = Number(data.rates["PLN"]);
+
+  for (const currencyKey in ratesInEur) {
+    if (currencyKey === "PLN") {
+      continue;
+    }
+    if (currencyKey === "EUR") {
+      rates[currencyKey] = euroRate.toFixed(4);
+      continue;
+    }
+
+    const valueInEur = Number(ratesInEur[currencyKey]);
+    rates[currencyKey] = ((1 / valueInEur) * euroRate).toFixed(4);
+  }
+
+  return rates;
 }
 
-async function loadAndInsertLatestRates() {
-  const [plnRate, res] = await Promise.all([getPlnRate(), fetch(`${apiUrl}/latest?${params()}`)]);
+async function loadLatestRates() {
+  const rates = await getRates("latest");
 
-  const data = await res.json();
-
-  // const rates = data.rates;
-  const { rates } = data;
   const documentFragment = document.createDocumentFragment();
-
-  for (const currency in rates) {
-    const currencyToPlnRate = (rates[currency] / plnRate).toFixed(5);
+  for (const currencyKey in rates) {
     const li = document.createElement("li");
-    li.textContent = `${currency}: ${currencyToPlnRate}`;
-    li.setAttribute("data-currency", currency);
+    li.textContent = `${currencyKey}: ${rates[currencyKey]}`;
+    li.setAttribute("data-currency", currencyKey);
     documentFragment.appendChild(li);
   }
 
@@ -36,49 +48,49 @@ async function loadAndInsertLatestRates() {
   ul.innerHTML = "";
   ul.appendChild(documentFragment);
 
-  const dataCurrency = document.querySelectorAll("[data-currency]");
-
-  dataCurrency.forEach((currency) => {
-    currency.addEventListener("click", (curr) => {
-      document.querySelector("ul.specific-currency").innerHTML = "";
-      getHistoricalRates(curr);
-    });
+  document.querySelectorAll("[data-currency]").forEach((currencyEl) => {
+    const currencyKey = currencyEl.getAttribute("data-currency");
+    currencyEl.addEventListener("click", () => displayHistoricalRates(currencyKey));
   });
 }
 
-loadAndInsertLatestRates();
+async function getHistoricalRate(date, currencyKey) {
+  // Api returns rate in EUR, we have to convert it to PLN
+  const res = await fetch(`${apiUrl}/${date}?${params({ symbols: [currencyKey, "PLN"] })}`);
+  const data = await res.json();
 
-async function getHistoricalRates(curr) {
-  const currencyValue = curr.target.getAttribute("data-currency");
+  return ((1 / data.rates[currencyKey]) * data.rates["PLN"]).toFixed(4);
+}
 
+async function displayHistoricalRates(currencyKey) {
   const date = new Date();
   let day = date.getDate();
   let month = date.getMonth() + 1;
   month = month.toString().padStart(2, "0");
   const year = date.getFullYear();
 
+  const dates = [];
+  const promises = [];
+
   for (let i = 0; i < 7; i++) {
     const currentDate = `${year}-${month}-${day}`;
-    const [res, plnRate] = await Promise.all([
-      fetch(`${apiUrl}/${currentDate}?${params({ symbols: currencyValue })}`),
-      getPlnRate(currentDate),
-    ]);
-
-    const data = await res.json();
-
-    const { rates } = data;
-    const documentFragment = document.createDocumentFragment();
-
-    for (const currency in rates) {
-      const currencyToPlnRate = (rates[currency] / plnRate).toFixed(5);
-      const li = document.createElement("li");
-      li.textContent = `${currentDate}: ${currencyToPlnRate}`;
-      documentFragment.appendChild(li);
-    }
-
-    const ul = document.querySelector("ul.specific-currency");
-    ul.appendChild(documentFragment);
-
+    dates.push(currentDate);
+    promises.push(getHistoricalRate(i === 0 ? "latest" : currentDate, currencyKey));
     day -= 1;
   }
+
+  const historicalRates = await Promise.all(promises);
+
+  const documentFragment = document.createDocumentFragment();
+  dates.forEach((date, index) => {
+    const li = document.createElement("li");
+    li.textContent = `${date}: ${historicalRates[index]}`;
+    documentFragment.appendChild(li);
+  });
+
+  const ul = document.querySelector("ul.specific-currency");
+  ul.innerHTML = "";
+  ul.appendChild(documentFragment);
 }
+
+loadLatestRates();
