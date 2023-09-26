@@ -1,5 +1,5 @@
 const apiUrl = "http://api.exchangeratesapi.io/v1";
-const apiAccessKey = "18b307333aefd4ec012fc91d03e783ec";
+const apiAccessKey = "05a37a6275ede72ca78a10e7ff73e7a9";
 
 function params(paramsObj) {
   return new URLSearchParams({
@@ -39,7 +39,12 @@ async function loadLatestRates() {
   const documentFragment = document.createDocumentFragment();
   for (const currencyKey in rates) {
     const li = document.createElement("li");
-    li.textContent = `${currencyKey}: ${rates[currencyKey]}`;
+    const currencyKeyDiv = document.createElement("div");
+    const ratesDiv = document.createElement("div");
+    currencyKeyDiv.textContent = `${currencyKey}`;
+    ratesDiv.textContent = `${rates[currencyKey]}`;
+    li.appendChild(currencyKeyDiv);
+    li.appendChild(ratesDiv);
     li.setAttribute("data-currency", currencyKey);
     documentFragment.appendChild(li);
   }
@@ -50,7 +55,9 @@ async function loadLatestRates() {
 
   document.querySelectorAll("[data-currency]").forEach((currencyEl) => {
     const currencyKey = currencyEl.getAttribute("data-currency");
-    currencyEl.addEventListener("click", () => displayHistoricalRates(currencyKey));
+    currencyEl.addEventListener("click", () => {
+      displayHistoricalRates(currencyKey);
+    });
   });
 }
 
@@ -87,6 +94,8 @@ async function displayHistoricalRates(currencyKey) {
     li.textContent = `${date}: ${historicalRates[index]}`;
     documentFragment.appendChild(li);
   });
+
+  document.querySelector(".specific-currency-wrapper").classList.remove("hidden");
 
   const ul = document.querySelector("ul.specific-currency");
   ul.innerHTML = "";
